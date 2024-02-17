@@ -12,6 +12,7 @@ import (
 	"github.com/mantton/beli/internal/cache"
 	"github.com/mantton/beli/internal/env"
 	v1 "github.com/mantton/beli/internal/handlers/v1"
+	"github.com/olahol/melody"
 	"github.com/rs/cors"
 )
 
@@ -25,8 +26,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Melody / Web Socket
+	m := melody.New()
+
 	// V1 Route Handler
-	v1 := v1.New(cache)
+	v1 := v1.New(cache, m)
 
 	r := chi.NewRouter()
 
@@ -60,6 +64,9 @@ func main() {
 		r.Post("/draw", v1.HandleDrawTile)
 		r.Get("/info", v1.HandleGetTile)
 		r.Get("/board", v1.HandleGetBoard)
+		r.HandleFunc("/board/ws", func(w http.ResponseWriter, r *http.Request) {
+			m.HandleRequest(w, r)
+		})
 	})
 
 	slog.Info("Starting Server.")

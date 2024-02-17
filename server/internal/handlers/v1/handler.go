@@ -9,15 +9,18 @@ import (
 	"strconv"
 
 	"github.com/mantton/beli/internal/cache"
+	"github.com/olahol/melody"
 )
 
 type V1Handler struct {
 	cache *cache.Cache
+	ws    *melody.Melody
 }
 
-func New(c *cache.Cache) *V1Handler {
+func New(c *cache.Cache, m *melody.Melody) *V1Handler {
 	return &V1Handler{
 		cache: c,
+		ws:    m,
 	}
 }
 
@@ -66,6 +69,9 @@ func (h *V1Handler) HandleDrawTile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		slog.Error(err.Error())
 	}
+
+	// Notify Listeners of board state change
+	go h.Notify(&body)
 }
 
 func (h *V1Handler) HandleGetTile(w http.ResponseWriter, r *http.Request) {
@@ -138,4 +144,11 @@ func (h *V1Handler) HandleGetBoard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		slog.Error(err.Error())
 	}
+}
+
+func (h *V1Handler) Notify(t *tileBody) {
+	offset := (t.Y * 10) + t.X
+
+	msg := fmt.Sprintf("%d,%d", offset, t.Color)
+	h.ws.Broadcast([]byte(msg))
 }
