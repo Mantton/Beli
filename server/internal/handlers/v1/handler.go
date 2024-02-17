@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -20,6 +21,12 @@ func New(c *cache.Cache) *V1Handler {
 	}
 }
 
+const (
+	CURRENT_BOARD_KEY = "CURRENT_BOARD"
+	BIT_SIZE          = 8
+	CANVAS_DIMENSION  = 10
+)
+
 type tileBody struct {
 	X     int `json:"x"`
 	Y     int `json:"y"`
@@ -27,7 +34,7 @@ type tileBody struct {
 }
 
 func (b tileBody) Valid() bool {
-	if b.X < 0 || b.X > 10 || b.Y < 0 || b.Y > 10 || b.Color < 0 || b.Color > 16 {
+	if b.X < 0 || b.X > CANVAS_DIMENSION || b.Y < 0 || b.Y > CANVAS_DIMENSION || b.Color < 0 || b.Color > int(math.Pow(2, BIT_SIZE)) {
 		return false
 	}
 

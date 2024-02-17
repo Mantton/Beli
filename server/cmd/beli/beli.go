@@ -12,6 +12,7 @@ import (
 	"github.com/mantton/beli/internal/cache"
 	"github.com/mantton/beli/internal/env"
 	v1 "github.com/mantton/beli/internal/handlers/v1"
+	"github.com/rs/cors"
 )
 
 func main() {
@@ -36,6 +37,19 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	r.Use(middleware.Timeout(15 * time.Second))
+
+	// Set up CORS middleware to allow all origins
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Allow all origins
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	})
+
+	// Use the CORS middleware
+	r.Use(corsMiddleware.Handler)
 
 	// Routes
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
