@@ -26,10 +26,6 @@ type tileBody struct {
 	Color int `json:"color"`
 }
 
-type board struct {
-	EncodedString string `json:"encoded"`
-}
-
 func (b tileBody) Valid() bool {
 	if b.X < 0 || b.X > 10 || b.Y < 0 || b.Y > 10 || b.Color < 0 || b.Color > 16 {
 		return false
@@ -117,7 +113,7 @@ func (h *V1Handler) HandleGetTile(w http.ResponseWriter, r *http.Request) {
 
 func (h *V1Handler) HandleGetBoard(w http.ResponseWriter, r *http.Request) {
 
-	res, err := h.cache.GetBoard(r.Context(), "CURRENT_BOARD")
+	data, err := h.cache.GetBoard(r.Context(), "CURRENT_BOARD")
 
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -125,11 +121,11 @@ func (h *V1Handler) HandleGetBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b := board{
-		EncodedString: res,
-	}
+	// Header to indicate binary data
+	w.Header().Set("Content-Type", "application/octet-stream")
 
-	err = json.NewEncoder(w).Encode(b)
+	// Write Binary Data to Response
+	_, err = w.Write(data)
 
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

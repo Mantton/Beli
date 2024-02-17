@@ -69,12 +69,13 @@ func (c *Cache) GetTile(ctx context.Context, x, y int64) (int, error) {
 	return int(res[0]), nil
 }
 
-func (c *Cache) GetBoard(ctx context.Context, key string) (string, error) {
+func (c *Cache) GetBoard(ctx context.Context, key string) ([]byte, error) {
 	res, err := c.client.Get(ctx, "CURRENT_BOARD").Result()
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return res, nil
+	data := []byte(res)
+	return data, nil
 }
