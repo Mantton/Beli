@@ -14,28 +14,49 @@ export const clientLoader = async () => {
   const buffer = await res.arrayBuffer();
   return new Uint8Array(buffer);
 };
+
 export default function Board() {
   const data = useLoaderData<typeof clientLoader>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const CELL_SIZE = 75; // Cell Size
 
+  const setTile = (offset: number, byte: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return; // return if canvas is not initialized
+    const context = canvas.getContext("2d");
+    if (!context) return; // return if context couldn't be obtained
+    const color = map8bitToRGB(byte);
+
+    const pos = offsetToXY(offset);
+
+    // Scale position to account for cell size
+    const x = pos.x * CELL_SIZE;
+    const y = pos.y * CELL_SIZE;
+
+    context.fillStyle = color; // NOTE:  fill style must be set before drawing
+    context.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+  };
+
+  // Set Board
   useEffect(() => {
+    const board = data as unknown as Uint8Array;
+
     const canvas = canvasRef.current;
     if (!canvas) return; // return if canvas is not initialized
 
     const context = canvas.getContext("2d");
     if (!context) return; // return if context couldn't be obtained
 
-    const typedData = data as unknown as Uint8Array; // TS / Remix Shenanigans
-    const CELL_SIZE = 75; // Cell Size
+    if (!board) return; // board has not been populated
 
     // adjust canvas size
-    const GRID_SIZE = Math.sqrt(typedData.length);
+    const GRID_SIZE = Math.sqrt(board.length);
     canvas.width = GRID_SIZE * CELL_SIZE;
     canvas.height = GRID_SIZE * CELL_SIZE;
 
     // Set Each Tile
-    for (let i = 0; i < typedData.length; i++) {
-      const byte = typedData[i];
+    for (let i = 0; i < board.length; i++) {
+      const byte = board[i];
       const color = map8bitToRGB(byte);
 
       const pos = offsetToXY(i);
@@ -48,6 +69,26 @@ export default function Board() {
       context.fillRect(x, y, CELL_SIZE, CELL_SIZE);
     }
   }, [data]);
+
+  // Listen for changes to board
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:3333/v1/board/ws");
+
+    ws.onopen = () => {
+      console.log("WS Conn");
+    };
+
+    ws.onmessage = ({ data: msg }) => {
+      if (typeof msg !== "string") return; // simple type guard
+      const [offset, color] = msg.split(",").map((i) => parseInt(i, 10));
+      setTile(offset, color);
+    };
+
+    // Close on unmount
+    return () => {
+      ws.close();
+    };
+  });
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
