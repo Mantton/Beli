@@ -1,64 +1,33 @@
 import type { MetaFunction } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
 import { useEffect, useRef } from "react";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Beli - Board" },
+    { title: "Beli - Colors" },
     { name: "description", content: "Beli - An Interactive Canvas" },
   ];
 };
 
-export const clientLoader = async () => {
-  const res = await fetch("http://localhost:3333/v1/board");
-  const buffer = await res.arrayBuffer();
-  return new Uint8Array(buffer);
-};
-
 export default function Board() {
-  const data = useLoaderData<typeof clientLoader>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const CELL_SIZE = 75; // Cell Size
 
-  const setTile = (offset: number, byte: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return; // return if canvas is not initialized
-    const context = canvas.getContext("2d");
-    if (!context) return; // return if context couldn't be obtained
-    const color = map8bitToRGB(byte);
-
-    const pos = offsetToXY(offset);
-
-    // Scale position to account for cell size
-    const x = pos.x * CELL_SIZE;
-    const y = pos.y * CELL_SIZE;
-
-    context.fillStyle = color; // NOTE:  fill style must be set before drawing
-    context.fillRect(x, y, CELL_SIZE, CELL_SIZE);
-  };
-
   // Set Board
   useEffect(() => {
-    const board = data as unknown as Uint8Array;
-
     const canvas = canvasRef.current;
     if (!canvas) return; // return if canvas is not initialized
 
     const context = canvas.getContext("2d");
     if (!context) return; // return if context couldn't be obtained
 
-    if (!board) return; // board has not been populated
-
     // adjust canvas size
-    const GRID_SIZE = Math.sqrt(board.length);
-    canvas.width = GRID_SIZE * CELL_SIZE;
-    canvas.height = GRID_SIZE * CELL_SIZE;
+    canvas.width = 16 * CELL_SIZE;
+    canvas.height = 16 * CELL_SIZE;
 
     // Set Each Tile
-    for (let i = 0; i < board.length; i++) {
-      const byte = board[i];
+    for (let i = 0; i < 256; i++) {
+      const byte = i;
       const color = map8bitToRGB(byte);
-
       const pos = offsetToXY(i);
 
       // Scale position to account for cell size
@@ -68,28 +37,7 @@ export default function Board() {
       context.fillStyle = color; // NOTE:  fill style must be set before drawing
       context.fillRect(x, y, CELL_SIZE, CELL_SIZE);
     }
-  }, [data]);
-
-  // Listen for changes to board
-  useEffect(() => {
-    const ws = new WebSocket("ws://localhost:3333/v1/board/ws");
-
-    ws.onopen = () => {
-      console.log("WS Conn");
-    };
-
-    ws.onmessage = ({ data: msg }) => {
-      if (typeof msg !== "string") return; // simple type guard
-      const [offset, color] = msg.split(",").map((i) => parseInt(i, 10));
-      setTile(offset, color);
-    };
-
-    // Close on unmount
-    return () => {
-      ws.close();
-    };
   });
-
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
       <h1>Current Board</h1>
@@ -115,6 +63,7 @@ function map8bitToRGB(byte: number): string {
   // 8 Bit Integer ranging from 0-255
   byte = byte % 256; // In the event this value is greater than 255, SHOULD NOT OCCUR
 
+  console.log(byte);
   const SCALE = 32; // 256 / 8
 
   // Extract RGB Components
@@ -131,7 +80,7 @@ function map8bitToRGB(byte: number): string {
  * @returns The calculated X & Y Position of the tile
  */
 function offsetToXY(offset: number) {
-  const y = Math.floor(offset / 10);
-  const x = offset - 10 * y;
+  const y = Math.floor(offset / 16);
+  const x = offset - 16 * y;
   return { x, y };
 }
